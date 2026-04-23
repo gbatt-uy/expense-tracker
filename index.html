@@ -361,9 +361,19 @@ body {
 <div class="auth-screen" id="authScreen">
   <div class="auth-box">
     <h1>Gastos</h1>
-    <p class="subtitle">Ingresá tu email para acceder</p>
-    <input type="email" id="authEmail" placeholder="tu@email.com" autocomplete="email">
-    <button class="btn-login" onclick="sendMagicLink()">Enviar link de acceso</button>
+    <!-- Step 1: Email -->
+    <div id="authStep1">
+      <p class="subtitle">Ingresá tu email para recibir un código</p>
+      <input type="email" id="authEmail" placeholder="tu@email.com" autocomplete="email">
+      <button class="btn-login" onclick="sendOTP()">Enviar código</button>
+    </div>
+    <!-- Step 2: OTP -->
+    <div id="authStep2" style="display:none;">
+      <p class="subtitle">Ingresá el código de 6 dígitos que te llegó al mail</p>
+      <input type="text" id="authOTP" placeholder="123456" maxlength="6" inputmode="numeric" autocomplete="one-time-code" style="text-align:center;font-size:24px;letter-spacing:8px;font-weight:700;">
+      <button class="btn-login" onclick="verifyOTP()">Verificar</button>
+      <p style="margin-top:12px;font-size:12px;color:var(--muted);cursor:pointer;" onclick="backToEmail()">Cambiar email</p>
+    </div>
     <div id="authMsg"></div>
   </div>
 </div>
@@ -492,20 +502,26 @@ function saveSession(data) {
   currentUser = data.user;
 }
 
-async function sendMagicLink() {
+let pendingEmail = '';
+
+async function sendOTP() {
   const email = document.getElementById('authEmail').value.trim();
   if (!email) return;
-  const btn = document.querySelector('.btn-login');
+  pendingEmail = email;
+  const btn = document.querySelector('#authStep1 .btn-login');
   btn.textContent = 'Enviando...';
   btn.disabled = true;
   try {
-    const res = await fetch(`${SUPABASE_URL}/auth/v1/magiclink`, {
+    const res = await fetch(`${SUPABASE_URL}/auth/v1/otp`, {
       method: 'POST',
       headers: { 'apikey': SUPABASE_KEY, 'Content-Type': 'application/json' },
       body: JSON.stringify({ email })
     });
     if (res.ok) {
-      document.getElementById('authMsg').innerHTML = '<div class="msg">Te enviamos un link a tu email. Revisá tu casilla.</div>';
+      document.getElementById('authStep1').style.display = 'none';
+      document.getElementById('authStep2').style.display = 'block';
+      document.getElementById('authMsg').innerHTML = '';
+      setTimeout(() => document.getElementById('authOTP').focus(), 100);
     } else {
       const err = await res.json();
       document.getElementById('authMsg').innerHTML = `<div class="err">Error: ${err.msg || err.error_description || 'Intenta de nuevo'}</div>`;
@@ -513,8 +529,41 @@ async function sendMagicLink() {
   } catch(e) {
     document.getElementById('authMsg').innerHTML = `<div class="err">Error de conexión</div>`;
   }
-  btn.textContent = 'Enviar link de acceso';
+  btn.textContent = 'Enviar código';
   btn.disabled = false;
+}
+
+async function verifyOTP() {
+  const token = document.getElementById('authOTP').value.trim();
+  if (!token || token.length !== 6) return;
+  const btn = document.querySelector('#authStep2 .btn-login');
+  btn.textContent = 'Verificando...';
+  btn.disabled = true;
+  try {
+    const res = await fetch(`${SUPABASE_URL}/auth/v1/verify`, {
+      method: 'POST',
+      headers: { 'apikey': SUPABASE_KEY, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: pendingEmail, token, type: 'email' })
+    });
+    if (res.ok) {
+      const data = await res.json();
+      saveSession(data);
+      showApp();
+    } else {
+      const err = await res.json();
+      document.getElementById('authMsg').innerHTML = `<div class="err">Código incorrecto o expirado</div>`;
+    }
+  } catch(e) {
+    document.getElementById('authMsg').innerHTML = `<div class="err">Error de conexión</div>`;
+  }
+  btn.textContent = 'Verificar';
+  btn.disabled = false;
+}
+
+function backToEmail() {
+  document.getElementById('authStep1').style.display = 'block';
+  document.getElementById('authStep2').style.display = 'none';
+  document.getElementById('authMsg').innerHTML = '';
 }
 
 function logout() {
