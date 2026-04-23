@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gastos</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+:root {
+  --bg: #f5f0eb;
+  --card: #ffffff;
+  --text: #2d2d2d;
+  --muted: #8a8a8a;
+  --accent: #c45d3e;
+  --accent-light: #f3e8e3;
+  --border: #e5e0db;
+  --green: #3d8b6e;
+  --shadow: 0 1px 3px rgba(0,0,0,0.06);
+}
+body {
+  font-family: 'Inter', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  padding: 0;
+}
+
+/* Header */
+.header {
+  padding: 24px 20px 16px;
+  max-width: 480px;
+  margin: 0 auto;
+}
+.header h1 {
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+}
+.header .month {
+  font-size: 14px;
+  color: var(--muted);
+  margin-top: 2px;
+}
+
+/* Summary */
+.summary {
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 0 20px;
+  display: flex;
+  gap: 12px;
+}
+.summary-card {
+  flex: 1;
+  background: var(--card);
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: var(--shadow);
+}
+.summary-card .label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--muted);
+  font-weight: 500;
+}
+.summary-card .amount {
+  font-size: 24px;
+  font-weight: 700;
+  margin-top: 4px;
+}
+.summary-card .count {
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 2px;
+}
+
+/* Categories */
+.categories {
+  max-width: 480px;
+  margin: 20px auto 0;
+  padding: 0 20px;
+}
+.categories h2 {
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 10px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.cat-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.cat-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--card);
+  padding: 12px 16px;
+  border-radius: 10px;
+  box-shadow: var(--shadow);
+}
+.cat-row .cat-name {
+  font-size: 14px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.cat-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+}
+.cat-row .cat-amount {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+/* Recent */
+.recent {
+  max-width: 480px;
+  margin: 20px auto 0;
+  padding: 0 20px 100px;
+}
+.recent h2 {
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 10px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.expense-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--border);
+}
+.expense-item:last-child { border-bottom: none; }
+.expense-left {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.expense-desc {
+  font-size: 14px;
+  font-weight: 500;
+}
+.expense-meta {
+  font-size: 12px;
+  color: var(--muted);
+}
+.expense-amount {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+/* Add button */
+.fab {
+  position: fixed;
+  bottom: 28px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--accent);
+  color: white;
+  border: none;
+  padding: 14px 28px;
+  border-radius: 50px;
+  font-family: 'Inter', sans-serif;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(196,93,62,0.35);
+  transition: transform 0.15s, box-shadow 0.15s;
+  z-index: 100;
+}
+.fab:active { transform: translateX(-50%) scale(0.96); }
+
+/* Modal */
+.modal-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.3);
+  z-index: 200;
+  justify-content: center;
+  align-items: flex-end;
+}
+.modal-overlay.open { display: flex; }
+.modal {
+  background: var(--card);
+  width: 100%;
+  max-width: 480px;
+  border-radius: 20px 20px 0 0;
+  padding: 24px 20px 32px;
+  animation: slideUp 0.25s ease;
+}
+@keyframes slideUp {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+.modal h2 {
+  font-size: 18px;
+  font-weight: 700;
+  margin-bottom: 20px;
+}
+.modal .field {
+  margin-bottom: 16px;
+}
+.modal label {
+  display: block;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 6px;
+}
+.modal input, .modal select {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1.5px solid var(--border);
+  border-radius: 10px;
+  font-family: 'Inter', sans-serif;
+  font-size: 15px;
+  background: var(--bg);
+  color: var(--text);
+  outline: none;
+  transition: border-color 0.15s;
+}
+.modal input:focus, .modal select:focus {
+  border-color: var(--accent);
+}
+.modal .actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 20px;
+}
+.btn {
+  flex: 1;
+  padding: 14px;
+  border: none;
+  border-radius: 10px;
+  font-family: 'Inter', sans-serif;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+.btn:active { opacity: 0.8; }
+.btn-primary {
+  background: var(--accent);
+  color: white;
+}
+.btn-secondary {
+  background: var(--bg);
+  color: var(--text);
+}
+
+/* Empty state */
+.empty {
+  text-align: center;
+  padding: 40px 20px;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+/* Loading */
+.loading {
+  text-align: center;
+  padding: 20px;
+  color: var(--muted);
+  font-size: 13px;
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>Gastos</h1>
+  <div class="month" id="currentMonth"></div>
+</div>
+
+<div class="summary">
+  <div class="summary-card">
+    <div class="label">Total del mes</div>
+    <div class="amount" id="totalAmount">$0</div>
+    <div class="count" id="totalCount">0 gastos</div>
+  </div>
+  <div class="summary-card">
+    <div class="label">Promedio</div>
+    <div class="amount" id="avgAmount">$0</div>
+    <div class="count">por gasto</div>
+  </div>
+</div>
+
+<div class="categories">
+  <h2>Por categoría</h2>
+  <div class="cat-list" id="catList">
+    <div class="loading">Cargando...</div>
+  </div>
+</div>
+
+<div class="recent">
+  <h2>Últimos gastos</h2>
+  <div id="expenseList">
+    <div class="loading">Cargando...</div>
+  </div>
+</div>
+
+<button class="fab" onclick="openModal()">+ Nuevo gasto</button>
+
+<div class="modal-overlay" id="modalOverlay" onclick="closeIfOverlay(event)">
+  <div class="modal">
+    <h2>Nuevo gasto</h2>
+    <div class="field">
+      <label>Monto ($)</label>
+      <input type="number" id="inputAmount" placeholder="0" inputmode="decimal" step="0.01">
+    </div>
+    <div class="field">
+      <label>Categoría</label>
+      <select id="inputCategory">
+        <option value="Comida">Comida</option>
+        <option value="Transporte">Transporte</option>
+        <option value="Entretenimiento">Entretenimiento</option>
+        <option value="Salud">Salud</option>
+        <option value="Suscripciones">Suscripciones</option>
+        <option value="Otros">Otros</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>Descripción (opcional)</label>
+      <input type="text" id="inputDesc" placeholder="Qué pagaste">
+    </div>
+    <div class="actions">
+      <button class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveExpense()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ---- CONFIG ----
+const SUPABASE_URL = 'https://omdoddkgdwwpgdinhxrw.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9tZG9kZGtnZHd3cGdkaW5oeHJ3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY5MDk0NDgsImV4cCI6MjA5MjQ4NTQ0OH0.gMag7UoSuz0L2jqrLpo8w0jYdlqrGPfW9ysIEHVSk6Q';
+
+const CAT_COLORS = {
+  'Comida': '#c45d3e',
+  'Transporte': '#457b9d',
+  'Entretenimiento': '#9b5de5',
+  'Salud': '#3d8b6e',
+  'Suscripciones': '#e69f3a',
+  'Otros': '#8a8a8a'
+};
+
+// ---- SUPABASE HELPERS ----
+async function supaFetch(path, opts = {}) {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
+    headers: {
+      'apikey': SUPABASE_KEY,
+      'Authorization': `Bearer ${SUPABASE_KEY}`,
+      'Content-Type': 'application/json',
+      'Prefer': opts.prefer || 'return=representation'
+    },
+    method: opts.method || 'GET',
+    body: opts.body ? JSON.stringify(opts.body) : undefined
+  });
+  if (!res.ok) throw new Error(`${res.status}: ${await res.text()}`);
+  return res.json();
+}
+
+// ---- DATA ----
+let expenses = [];
+
+async function loadExpenses() {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = now.getMonth();
+  const start = new Date(year, month, 1).toISOString().split('T')[0];
+  const end = new Date(year, month + 1, 0).toISOString().split('T')[0];
+
+  try {
+    expenses = await supaFetch(
+      `expenses?date=gte.${start}&date=lte.${end}&order=created_at.desc`
+    );
+  } catch (e) {
+    console.error('Error loading:', e);
+    expenses = [];
+  }
+  render();
+}
+
+async function addExpense(amount, category, description) {
+  const item = {
+    amount: parseFloat(amount),
+    category,
+    description: description || null,
+    date: new Date().toISOString().split('T')[0]
+  };
+  await supaFetch('expenses', { method: 'POST', body: item });
+  await loadExpenses();
+}
+
+// ---- RENDER ----
+function fmt(n) {
+  return '$' + Number(n).toLocaleString('es-UY', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+}
+
+function render() {
+  // Month
+  const months = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+  const now = new Date();
+  document.getElementById('currentMonth').textContent = `${months[now.getMonth()]} ${now.getFullYear()}`;
+
+  // Summary
+  const total = expenses.reduce((s, e) => s + Number(e.amount), 0);
+  document.getElementById('totalAmount').textContent = fmt(total);
+  document.getElementById('totalCount').textContent = `${expenses.length} gasto${expenses.length !== 1 ? 's' : ''}`;
+  document.getElementById('avgAmount').textContent = expenses.length ? fmt(total / expenses.length) : '$0';
+
+  // Categories
+  const cats = {};
+  expenses.forEach(e => {
+    cats[e.category] = (cats[e.category] || 0) + Number(e.amount);
+  });
+  const catList = document.getElementById('catList');
+  const sortedCats = Object.entries(cats).sort((a, b) => b[1] - a[1]);
+  if (sortedCats.length === 0) {
+    catList.innerHTML = '<div class="empty">Sin gastos este mes</div>';
+  } else {
+    catList.innerHTML = sortedCats.map(([cat, amt]) => `
+      <div class="cat-row">
+        <span class="cat-name">
+          <span class="cat-dot" style="background:${CAT_COLORS[cat] || '#8a8a8a'}"></span>
+          ${cat}
+        </span>
+        <span class="cat-amount">${fmt(amt)}</span>
+      </div>
+    `).join('');
+  }
+
+  // Recent expenses
+  const list = document.getElementById('expenseList');
+  if (expenses.length === 0) {
+    list.innerHTML = '<div class="empty">Cargá tu primer gasto</div>';
+  } else {
+    list.innerHTML = expenses.slice(0, 20).map(e => {
+      const d = new Date(e.date + 'T12:00:00');
+      const dateStr = d.toLocaleDateString('es-UY', { day: 'numeric', month: 'short' });
+      return `
+        <div class="expense-item">
+          <div class="expense-left">
+            <span class="expense-desc">${e.description || e.category}</span>
+            <span class="expense-meta">${e.category} · ${dateStr}</span>
+          </div>
+          <span class="expense-amount">${fmt(e.amount)}</span>
+        </div>
+      `;
+    }).join('');
+  }
+}
+
+// ---- MODAL ----
+function openModal() {
+  document.getElementById('modalOverlay').classList.add('open');
+  document.getElementById('inputAmount').value = '';
+  document.getElementById('inputDesc').value = '';
+  document.getElementById('inputCategory').selectedIndex = 0;
+  setTimeout(() => document.getElementById('inputAmount').focus(), 100);
+}
+function closeModal() {
+  document.getElementById('modalOverlay').classList.remove('open');
+}
+function closeIfOverlay(e) {
+  if (e.target === document.getElementById('modalOverlay')) closeModal();
+}
+async function saveExpense() {
+  const amount = document.getElementById('inputAmount').value;
+  const category = document.getElementById('inputCategory').value;
+  const desc = document.getElementById('inputDesc').value;
+  if (!amount || parseFloat(amount) <= 0) {
+    document.getElementById('inputAmount').style.borderColor = 'var(--accent)';
+    return;
+  }
+  const btn = document.querySelector('.btn-primary');
+  btn.textContent = '...';
+  btn.disabled = true;
+  try {
+    await addExpense(amount, category, desc);
+    closeModal();
+  } catch (e) {
+    alert('Error al guardar: ' + e.message);
+  }
+  btn.textContent = 'Guardar';
+  btn.disabled = false;
+}
+
+// ---- INIT ----
+loadExpenses();
+</script>
+</body>
+</html>
