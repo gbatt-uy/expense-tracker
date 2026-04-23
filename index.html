@@ -279,12 +279,103 @@ body {
   color: var(--muted);
   font-size: 13px;
 }
+
+/* Auth screen */
+.auth-screen {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 20px;
+}
+.auth-box {
+  width: 100%;
+  max-width: 360px;
+  text-align: center;
+}
+.auth-box h1 {
+  font-size: 32px;
+  font-weight: 700;
+  margin-bottom: 8px;
+  letter-spacing: -0.5px;
+}
+.auth-box .subtitle {
+  color: var(--muted);
+  font-size: 14px;
+  margin-bottom: 32px;
+}
+.auth-box input {
+  width: 100%;
+  padding: 14px 16px;
+  border: 1.5px solid var(--border);
+  border-radius: 12px;
+  font-family: 'Inter', sans-serif;
+  font-size: 15px;
+  background: var(--card);
+  color: var(--text);
+  outline: none;
+  margin-bottom: 12px;
+  transition: border-color 0.15s;
+}
+.auth-box input:focus { border-color: var(--accent); }
+.auth-box .btn-login {
+  width: 100%;
+  padding: 14px;
+  background: var(--accent);
+  color: white;
+  border: none;
+  border-radius: 12px;
+  font-family: 'Inter', sans-serif;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.auth-box .btn-login:active { opacity: 0.8; }
+.auth-box .msg {
+  margin-top: 16px;
+  font-size: 13px;
+  color: var(--green);
+}
+.auth-box .err {
+  margin-top: 16px;
+  font-size: 13px;
+  color: var(--accent);
+}
+.logout-btn {
+  background: none;
+  border: none;
+  color: var(--muted);
+  font-family: 'Inter', sans-serif;
+  font-size: 12px;
+  cursor: pointer;
+  padding: 4px 8px;
+}
+.logout-btn:hover { color: var(--accent); }
+.app-content { display: none; }
 </style>
 </head>
 <body>
 
+<!-- Auth Screen -->
+<div class="auth-screen" id="authScreen">
+  <div class="auth-box">
+    <h1>Gastos</h1>
+    <p class="subtitle">Ingresá tu email para acceder</p>
+    <input type="email" id="authEmail" placeholder="tu@email.com" autocomplete="email">
+    <button class="btn-login" onclick="sendMagicLink()">Enviar link de acceso</button>
+    <div id="authMsg"></div>
+  </div>
+</div>
+
+<!-- App Content (hidden until logged in) -->
+<div class="app-content" id="appContent">
+
 <div class="header">
-  <h1>Gastos</h1>
+  <div style="display:flex;justify-content:space-between;align-items:center;">
+    <h1>Gastos</h1>
+    <button class="logout-btn" onclick="logout()">Salir</button>
+  </div>
   <div class="month" id="currentMonth"></div>
 </div>
 
@@ -316,6 +407,8 @@ body {
 </div>
 
 <button class="fab" onclick="openModal()">+ Nuevo gasto</button>
+
+</div><!-- end app-content -->
 
 <div class="modal-overlay" id="modalOverlay" onclick="closeIfOverlay(event)">
   <div class="modal">
@@ -360,12 +453,126 @@ const CAT_COLORS = {
   'Otros': '#8a8a8a'
 };
 
+// ---- AUTH ----
+let accessToken = null;
+let currentUser = null;
+
+function getStoredSession() {
+  try {
+    const s = JSON.parse(localStorage.getItem('sb_session'));
+    if (s && s.access_token && s.expires_at > Date.now() / 1000) return s;
+    // Try refresh
+    if (s && s.refresh_token) return refreshSession(s.refresh_token);
+  } catch(e) {}
+  return null;
+}
+
+async function refreshSession(refreshToken) {
+  try {
+    const res = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=refresh_token`, {
+      method: 'POST',
+      headers: { 'apikey': SUPABASE_KEY, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ refresh_token: refreshToken })
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    saveSession(data);
+    return data;
+  } catch(e) { return null; }
+}
+
+function saveSession(data) {
+  localStorage.setItem('sb_session', JSON.stringify({
+    access_token: data.access_token,
+    refresh_token: data.refresh_token,
+    expires_at: data.expires_at || (Date.now()/1000 + 3600),
+    user: data.user
+  }));
+  accessToken = data.access_token;
+  currentUser = data.user;
+}
+
+async function sendMagicLink() {
+  const email = document.getElementById('authEmail').value.trim();
+  if (!email) return;
+  const btn = document.querySelector('.btn-login');
+  btn.textContent = 'Enviando...';
+  btn.disabled = true;
+  try {
+    const res = await fetch(`${SUPABASE_URL}/auth/v1/magiclink`, {
+      method: 'POST',
+      headers: { 'apikey': SUPABASE_KEY, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email })
+    });
+    if (res.ok) {
+      document.getElementById('authMsg').innerHTML = '<div class="msg">Te enviamos un link a tu email. Revisá tu casilla.</div>';
+    } else {
+      const err = await res.json();
+      document.getElementById('authMsg').innerHTML = `<div class="err">Error: ${err.msg || err.error_description || 'Intenta de nuevo'}</div>`;
+    }
+  } catch(e) {
+    document.getElementById('authMsg').innerHTML = `<div class="err">Error de conexión</div>`;
+  }
+  btn.textContent = 'Enviar link de acceso';
+  btn.disabled = false;
+}
+
+function logout() {
+  localStorage.removeItem('sb_session');
+  accessToken = null;
+  currentUser = null;
+  showAuth();
+}
+
+function showAuth() {
+  document.getElementById('authScreen').style.display = 'flex';
+  document.getElementById('appContent').style.display = 'none';
+}
+
+function showApp() {
+  document.getElementById('authScreen').style.display = 'none';
+  document.getElementById('appContent').style.display = 'block';
+  loadExpenses();
+}
+
+// Handle magic link callback (token in URL hash)
+function handleAuthCallback() {
+  const hash = window.location.hash;
+  if (hash && hash.includes('access_token')) {
+    const params = new URLSearchParams(hash.substring(1));
+    const access_token = params.get('access_token');
+    const refresh_token = params.get('refresh_token');
+    const expires_in = parseInt(params.get('expires_in') || '3600');
+    if (access_token) {
+      saveSession({
+        access_token,
+        refresh_token,
+        expires_at: Date.now()/1000 + expires_in,
+        user: { id: 'pending' }
+      });
+      // Get user info
+      fetch(`${SUPABASE_URL}/auth/v1/user`, {
+        headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${access_token}` }
+      }).then(r => r.json()).then(user => {
+        currentUser = user;
+        const s = JSON.parse(localStorage.getItem('sb_session'));
+        s.user = user;
+        localStorage.setItem('sb_session', JSON.stringify(s));
+      });
+      window.location.hash = '';
+      return true;
+    }
+  }
+  return false;
+}
+
 // ---- SUPABASE HELPERS ----
 async function supaFetch(path, opts = {}) {
+  const token = accessToken || SUPABASE_KEY;
   const res = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
     headers: {
       'apikey': SUPABASE_KEY,
-      'Authorization': `Bearer ${SUPABASE_KEY}`,
+      'Authorization': `Bearer ${token}`,
       'Content-Type': 'application/json',
       'Prefer': opts.prefer || 'return=representation'
     },
@@ -402,7 +609,8 @@ async function addExpense(amount, category, description) {
     amount: parseFloat(amount),
     category,
     description: description || null,
-    date: new Date().toISOString().split('T')[0]
+    date: new Date().toISOString().split('T')[0],
+    user_id: currentUser ? currentUser.id : null
   };
   await supaFetch('expenses', { method: 'POST', body: item });
   await loadExpenses();
@@ -503,7 +711,22 @@ async function saveExpense() {
 }
 
 // ---- INIT ----
-loadExpenses();
+(async function init() {
+  // Check for magic link callback
+  if (handleAuthCallback()) {
+    showApp();
+    return;
+  }
+  // Check stored session
+  const session = await getStoredSession();
+  if (session) {
+    accessToken = session.access_token;
+    currentUser = session.user;
+    showApp();
+  } else {
+    showAuth();
+  }
+})();
 </script>
 </body>
 </html>
