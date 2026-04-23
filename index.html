@@ -657,6 +657,10 @@ body {
       </div>
     </div>
     <div class="field">
+      <label>Fecha</label>
+      <input type="date" id="inputDate">
+    </div>
+    <div class="field">
       <label>Descripción (opcional)</label>
       <input type="text" id="inputDesc" placeholder="Qué pagaste">
     </div>
@@ -914,12 +918,12 @@ async function loadExpenses() {
   render();
 }
 
-async function addExpense(amount, category, description) {
+async function addExpense(amount, category, description, date) {
   const item = {
     amount: parseFloat(amount),
     category,
     description: description || null,
-    date: new Date().toISOString().split('T')[0],
+    date: date || new Date().toISOString().split('T')[0],
     user_id: currentUser ? currentUser.id : null
   };
   await supaFetch('expenses', { method: 'POST', body: item });
@@ -1210,6 +1214,7 @@ function openModal() {
   document.getElementById('inputCategory').selectedIndex = 0;
   document.getElementById('customCatField').style.display = 'none';
   document.getElementById('inputCustomCat').value = '';
+  document.getElementById('inputDate').value = new Date().toISOString().split('T')[0];
   setTimeout(() => document.getElementById('inputAmount').focus(), 100);
 }
 function closeModal() {
@@ -1229,6 +1234,7 @@ async function saveExpense() {
     }
   }
   const desc = document.getElementById('inputDesc').value;
+  const date = document.getElementById('inputDate').value;
   if (!amount || parseFloat(amount) <= 0) {
     document.getElementById('inputAmount').style.borderColor = 'var(--accent)';
     return;
@@ -1237,7 +1243,7 @@ async function saveExpense() {
   btn.textContent = '...';
   btn.disabled = true;
   try {
-    await addExpense(amount, category, desc);
+    await addExpense(amount, category, desc, date);
     closeModal();
     showToast('✓ Guardado');
   } catch (e) {
