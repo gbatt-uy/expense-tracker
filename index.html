@@ -26,6 +26,24 @@ body {
   padding: 0;
 }
 
+/* Toast */
+.toast {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  background: var(--green);
+  color: white;
+  text-align: center;
+  padding: 14px 20px;
+  font-size: 14px;
+  font-weight: 500;
+  z-index: 1000;
+  transform: translateY(-100%);
+  transition: transform 0.25s ease;
+}
+.toast.show { transform: translateY(0); }
+
 /* Header */
 .header {
   padding: 24px 20px 16px;
@@ -37,11 +55,28 @@ body {
   font-weight: 700;
   letter-spacing: -0.5px;
 }
-.header .month {
+.month-nav {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+}
+.month-label {
   font-size: 14px;
   color: var(--muted);
-  margin-top: 2px;
 }
+.month-arrow {
+  background: none;
+  border: none;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 18px;
+  padding: 0 2px;
+  line-height: 1;
+  transition: color 0.15s;
+}
+.month-arrow:hover { color: var(--accent); }
+.month-arrow:disabled { opacity: 0; pointer-events: none; }
 
 /* Summary */
 .summary {
@@ -148,6 +183,7 @@ body {
   display: flex;
   flex-direction: column;
   gap: 2px;
+  flex: 1;
 }
 .expense-desc {
   font-size: 14px;
@@ -157,9 +193,58 @@ body {
   font-size: 12px;
   color: var(--muted);
 }
+.expense-right {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
 .expense-amount {
   font-size: 15px;
   font-weight: 600;
+}
+.delete-btn {
+  background: none;
+  border: none;
+  color: var(--muted);
+  cursor: pointer;
+  padding: 4px 5px;
+  font-size: 13px;
+  opacity: 0.3;
+  transition: opacity 0.15s;
+  line-height: 1;
+}
+.expense-item:hover .delete-btn { opacity: 1; }
+.delete-confirm {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.delete-confirm-text {
+  font-size: 12px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.delete-yes {
+  background: var(--accent);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: 'Inter', sans-serif;
+}
+.delete-no {
+  background: none;
+  color: var(--muted);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 12px;
+  cursor: pointer;
+  font-family: 'Inter', sans-serif;
 }
 
 /* Add button */
@@ -264,6 +349,9 @@ body {
   color: var(--text);
 }
 
+/* Custom category input */
+#customCatField { display: none; margin-top: 10px; }
+
 /* Empty state */
 .empty {
   text-align: center;
@@ -357,6 +445,8 @@ body {
 </head>
 <body>
 
+<div class="toast" id="toast"></div>
+
 <!-- Auth Screen -->
 <div class="auth-screen" id="authScreen">
   <div class="auth-box">
@@ -386,7 +476,11 @@ body {
     <h1>Gastos</h1>
     <button class="logout-btn" onclick="logout()">Salir</button>
   </div>
-  <div class="month" id="currentMonth"></div>
+  <div class="month-nav">
+    <button class="month-arrow" id="btnPrevMonth" onclick="prevMonth()">&#8249;</button>
+    <span class="month-label" id="currentMonth"></span>
+    <button class="month-arrow" id="btnNextMonth" onclick="nextMonth()">&#8250;</button>
+  </div>
 </div>
 
 <div class="summary">
@@ -429,14 +523,18 @@ body {
     </div>
     <div class="field">
       <label>Categoría</label>
-      <select id="inputCategory">
+      <select id="inputCategory" onchange="onCategoryChange()">
         <option value="Comida">Comida</option>
         <option value="Transporte">Transporte</option>
         <option value="Entretenimiento">Entretenimiento</option>
         <option value="Salud">Salud</option>
         <option value="Suscripciones">Suscripciones</option>
         <option value="Otros">Otros</option>
+        <option value="__custom__">Otra...</option>
       </select>
+      <div id="customCatField">
+        <input type="text" id="inputCustomCat" placeholder="Escribí la categoría">
+      </div>
     </div>
     <div class="field">
       <label>Descripción (opcional)</label>
@@ -629,18 +727,19 @@ async function supaFetch(path, opts = {}) {
     body: opts.body ? JSON.stringify(opts.body) : undefined
   });
   if (!res.ok) throw new Error(`${res.status}: ${await res.text()}`);
-  return res.json();
+  if (res.status === 204) return null;
+  const text = await res.text();
+  return text ? JSON.parse(text) : null;
 }
 
 // ---- DATA ----
 let expenses = [];
+let viewYear = new Date().getFullYear();
+let viewMonth = new Date().getMonth();
 
 async function loadExpenses() {
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = now.getMonth();
-  const start = new Date(year, month, 1).toISOString().split('T')[0];
-  const end = new Date(year, month + 1, 0).toISOString().split('T')[0];
+  const start = new Date(viewYear, viewMonth, 1).toISOString().split('T')[0];
+  const end = new Date(viewYear, viewMonth + 1, 0).toISOString().split('T')[0];
 
   try {
     expenses = await supaFetch(
@@ -665,16 +764,70 @@ async function addExpense(amount, category, description) {
   await loadExpenses();
 }
 
+// ---- DELETE ----
+let pendingDeleteId = null;
+
+function confirmDelete(id) {
+  pendingDeleteId = id;
+  render();
+}
+
+function cancelDelete() {
+  pendingDeleteId = null;
+  render();
+}
+
+async function executeDelete(id) {
+  try {
+    await supaFetch(`expenses?id=eq.${id}`, { method: 'DELETE', prefer: 'return=minimal' });
+    pendingDeleteId = null;
+    await loadExpenses();
+  } catch (e) {
+    alert('Error al borrar: ' + e.message);
+  }
+}
+
+// ---- MONTH NAV ----
+function prevMonth() {
+  if (viewMonth === 0) { viewMonth = 11; viewYear--; }
+  else { viewMonth--; }
+  pendingDeleteId = null;
+  loadExpenses();
+}
+
+function nextMonth() {
+  const now = new Date();
+  if (viewYear === now.getFullYear() && viewMonth === now.getMonth()) return;
+  if (viewMonth === 11) { viewMonth = 0; viewYear++; }
+  else { viewMonth++; }
+  pendingDeleteId = null;
+  loadExpenses();
+}
+
+// ---- TOAST ----
+let toastTimer = null;
+
+function showToast(msg) {
+  const toast = document.getElementById('toast');
+  toast.textContent = msg;
+  toast.classList.add('show');
+  if (toastTimer) clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => toast.classList.remove('show'), 2000);
+}
+
 // ---- RENDER ----
 function fmt(n) {
   return '$' + Number(n).toLocaleString('es-UY', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
 }
 
 function render() {
-  // Month
   const months = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
   const now = new Date();
-  document.getElementById('currentMonth').textContent = `${months[now.getMonth()]} ${now.getFullYear()}`;
+  const isCurrentMonth = viewYear === now.getFullYear() && viewMonth === now.getMonth();
+
+  // Month nav
+  document.getElementById('currentMonth').textContent = `${months[viewMonth]} ${viewYear}`;
+  document.getElementById('btnNextMonth').disabled = isCurrentMonth;
 
   // Summary
   const total = expenses.reduce((s, e) => s + Number(e.amount), 0);
@@ -711,13 +864,22 @@ function render() {
     list.innerHTML = expenses.slice(0, 20).map(e => {
       const d = new Date(e.date + 'T12:00:00');
       const dateStr = d.toLocaleDateString('es-UY', { day: 'numeric', month: 'short' });
+      const isPending = e.id === pendingDeleteId;
+      const rightContent = isPending
+        ? `<div class="delete-confirm">
+             <span class="delete-confirm-text">¿Seguro?</span>
+             <button class="delete-yes" onclick="executeDelete('${e.id}')">Sí</button>
+             <button class="delete-no" onclick="cancelDelete()">No</button>
+           </div>`
+        : `<span class="expense-amount">${fmt(e.amount)}</span>
+           <button class="delete-btn" onclick="confirmDelete('${e.id}')" title="Borrar">✕</button>`;
       return `
         <div class="expense-item">
           <div class="expense-left">
             <span class="expense-desc">${e.description || e.category}</span>
             <span class="expense-meta">${e.category} · ${dateStr}</span>
           </div>
-          <span class="expense-amount">${fmt(e.amount)}</span>
+          <div class="expense-right">${rightContent}</div>
         </div>
       `;
     }).join('');
@@ -725,11 +887,18 @@ function render() {
 }
 
 // ---- MODAL ----
+function onCategoryChange() {
+  const val = document.getElementById('inputCategory').value;
+  document.getElementById('customCatField').style.display = val === '__custom__' ? 'block' : 'none';
+}
+
 function openModal() {
   document.getElementById('modalOverlay').classList.add('open');
   document.getElementById('inputAmount').value = '';
   document.getElementById('inputDesc').value = '';
   document.getElementById('inputCategory').selectedIndex = 0;
+  document.getElementById('customCatField').style.display = 'none';
+  document.getElementById('inputCustomCat').value = '';
   setTimeout(() => document.getElementById('inputAmount').focus(), 100);
 }
 function closeModal() {
@@ -740,7 +909,14 @@ function closeIfOverlay(e) {
 }
 async function saveExpense() {
   const amount = document.getElementById('inputAmount').value;
-  const category = document.getElementById('inputCategory').value;
+  let category = document.getElementById('inputCategory').value;
+  if (category === '__custom__') {
+    category = document.getElementById('inputCustomCat').value.trim();
+    if (!category) {
+      document.getElementById('inputCustomCat').style.borderColor = 'var(--accent)';
+      return;
+    }
+  }
   const desc = document.getElementById('inputDesc').value;
   if (!amount || parseFloat(amount) <= 0) {
     document.getElementById('inputAmount').style.borderColor = 'var(--accent)';
@@ -752,6 +928,7 @@ async function saveExpense() {
   try {
     await addExpense(amount, category, desc);
     closeModal();
+    showToast('✓ Guardado');
   } catch (e) {
     alert('Error al guardar: ' + e.message);
   }
