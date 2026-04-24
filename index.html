@@ -15,7 +15,6 @@
   --accent: #10b981;
   --accent-light: #ecfdf5;
   --border: #e5e5e0;
-  --green: #10b981;
   --shadow: 0 1px 3px rgba(0,0,0,0.06);
 }
 body {
@@ -32,7 +31,7 @@ body {
   top: 0;
   left: 0;
   right: 0;
-  background: var(--green);
+  background: var(--accent);
   color: white;
   text-align: center;
   padding: 14px 20px;
@@ -530,7 +529,7 @@ body {
 .auth-box .msg {
   margin-top: 16px;
   font-size: 13px;
-  color: var(--green);
+  color: var(--accent);
 }
 .auth-box .err {
   margin-top: 16px;
@@ -698,16 +697,19 @@ const CAT_COLORS = {
 
 const DEFAULT_CATS = ['Comida', 'Transporte', 'Entretenimiento', 'Salud', 'Suscripciones'];
 
+function esc(str) {
+  return String(str ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
 // ---- AUTH ----
 let accessToken = null;
 let currentUser = null;
 
-function getStoredSession() {
+async function getStoredSession() {
   try {
     const s = JSON.parse(localStorage.getItem('sb_session'));
     if (s && s.access_token && s.expires_at > Date.now() / 1000) return s;
-    // Try refresh
-    if (s && s.refresh_token) return refreshSession(s.refresh_token);
+    if (s && s.refresh_token) return await refreshSession(s.refresh_token);
   } catch(e) {}
   return null;
 }
@@ -759,7 +761,7 @@ async function sendOTP() {
       setTimeout(() => document.getElementById('authOTP').focus(), 100);
     } else {
       const err = await res.json();
-      document.getElementById('authMsg').innerHTML = `<div class="err">Error: ${err.msg || err.error_description || 'Intenta de nuevo'}</div>`;
+      document.getElementById('authMsg').innerHTML = `<div class="err">Error: ${esc(err.msg || err.error_description || 'Intenta de nuevo')}</div>`;
     }
   } catch(e) {
     document.getElementById('authMsg').innerHTML = `<div class="err">Error de conexión</div>`;
@@ -1022,8 +1024,8 @@ function openBudgetModal() {
   ])];
   document.getElementById('budgetFields').innerHTML = activeCats.map(cat => `
     <div class="field">
-      <label>${cat}</label>
-      <input type="number" data-cat="${cat}" placeholder="Sin límite" inputmode="decimal"
+      <label>${esc(cat)}</label>
+      <input type="number" data-cat="${esc(cat)}" placeholder="Sin límite" inputmode="decimal"
         value="${budgets[cat] || ''}" min="0" step="1">
     </div>
   `).join('');
@@ -1062,81 +1064,57 @@ function catTotals(arr) {
   return totals;
 }
 
-function render() {
-  const months = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
-
-  // Month nav
-  document.getElementById('currentMonth').textContent = `${months[viewMonth]} ${viewYear}`;
-
-  // Summary
-  const total = expenses.reduce((s, e) => s + Number(e.amount), 0);
+function renderSummary(total) {
   document.getElementById('totalAmount').textContent = fmt(total);
   document.getElementById('totalCount').textContent = `${expenses.length} gasto${expenses.length !== 1 ? 's' : ''}`;
   document.getElementById('avgAmount').textContent = expenses.length ? fmt(total / expenses.length) : '$0';
+}
 
-  const cats = catTotals(expenses);
-  const prevCats = catTotals(prevExpenses);
-  const budgets = getBudgets();
-  const sortedCats = Object.entries(cats).sort((a, b) => b[1] - a[1]);
-
-  // Categories
+function renderCategories(sortedCats, prevCats, budgets) {
   const catList = document.getElementById('catList');
   if (sortedCats.length === 0) {
     catList.innerHTML = '<div class="empty">Sin gastos este mes</div>';
-  } else {
-    catList.innerHTML = sortedCats.map(([cat, amt]) => {
-      // Month-over-month change
-      let changeHtml = '';
-      if (prevCats[cat] !== undefined && prevCats[cat] > 0) {
-        const pct = Math.round(((amt - prevCats[cat]) / prevCats[cat]) * 100);
-        if (pct > 0) {
-          changeHtml = `<span class="cat-change" style="color:#ef4444">↑${pct}%</span>`;
-        } else if (pct < 0) {
-          changeHtml = `<span class="cat-change" style="color:#10b981">↓${Math.abs(pct)}%</span>`;
-        } else {
-          changeHtml = `<span class="cat-change" style="color:#8a8a8a">—</span>`;
-        }
-      }
-
-      // Budget progress bar
-      let barHtml = '';
-      if (budgets[cat]) {
-        const fillPct = (amt / budgets[cat]) * 100;
-        const widthPct = Math.min(fillPct, 100);
-        const barColor = fillPct > 100 ? '#ef4444' : fillPct > 80 ? '#f97316' : fillPct > 60 ? '#f59e0b' : '#10b981';
-        barHtml = `<div class="budget-bar"><div class="budget-bar-fill" style="width:${widthPct}%;background:${barColor}"></div></div>`;
-      }
-
-      return `
-        <div class="cat-row">
-          <div class="cat-row-main">
-            <span class="cat-name">
-              <span class="cat-dot" style="background:${CAT_COLORS[cat] || '#8a8a8a'}"></span>
-              ${cat}
-            </span>
-            <span class="cat-amount">${fmt(amt)}${changeHtml}</span>
-          </div>
-          ${barHtml}
-        </div>
-      `;
-    }).join('');
+    return;
   }
+  catList.innerHTML = sortedCats.map(([cat, amt]) => {
+    let changeHtml = '';
+    if (prevCats[cat] !== undefined && prevCats[cat] > 0) {
+      const pct = Math.round(((amt - prevCats[cat]) / prevCats[cat]) * 100);
+      if (pct > 0) changeHtml = `<span class="cat-change" style="color:#ef4444">↑${pct}%</span>`;
+      else if (pct < 0) changeHtml = `<span class="cat-change" style="color:#10b981">↓${Math.abs(pct)}%</span>`;
+      else changeHtml = `<span class="cat-change" style="color:#8a8a8a">—</span>`;
+    }
+    let barHtml = '';
+    if (budgets[cat]) {
+      const fillPct = (amt / budgets[cat]) * 100;
+      const widthPct = Math.min(fillPct, 100);
+      const barColor = fillPct > 100 ? '#ef4444' : fillPct > 80 ? '#f97316' : fillPct > 60 ? '#f59e0b' : '#10b981';
+      barHtml = `<div class="budget-bar"><div class="budget-bar-fill" style="width:${widthPct}%;background:${barColor}"></div></div>`;
+    }
+    return `
+      <div class="cat-row">
+        <div class="cat-row-main">
+          <span class="cat-name">
+            <span class="cat-dot" style="background:${CAT_COLORS[cat] || '#8a8a8a'}"></span>
+            ${esc(cat)}
+          </span>
+          <span class="cat-amount">${fmt(amt)}${changeHtml}</span>
+        </div>
+        ${barHtml}
+      </div>
+    `;
+  }).join('');
+}
 
-  // Insights
+function renderInsights(sortedCats, prevCats, budgets, total) {
   const insights = [];
-
-  // Category up >20% vs prev month
   sortedCats.forEach(([cat, amt]) => {
     const prev = prevCats[cat];
     if (prev > 0) {
       const pct = Math.round(((amt - prev) / prev) * 100);
-      if (pct > 20) {
-        insights.push({ type: 'red', text: `Gastaste ${pct}% más en ${cat} que el mes pasado` });
-      }
+      if (pct > 20) insights.push({ type: 'red', text: `Gastaste ${pct}% más en ${esc(cat)} que el mes pasado` });
     }
   });
-
-  // Total vs average of previous months
   const prevTotals = [
     prevExpenses.reduce((s, e) => s + Number(e.amount), 0),
     ...histMonths.map(arr => arr.reduce((s, e) => s + Number(e.amount), 0))
@@ -1145,20 +1123,13 @@ function render() {
     const avg = prevTotals.reduce((a, b) => a + b, 0) / prevTotals.length;
     if (avg > 0) {
       const pct = Math.round(((total - avg) / avg) * 100);
-      if (pct > 10) {
-        insights.push({ type: 'red', text: `Este mes vas ${pct}% por encima de tu promedio` });
-      }
+      if (pct > 10) insights.push({ type: 'red', text: `Este mes vas ${pct}% por encima de tu promedio` });
     }
   }
-
-  // Budget exceeded
   sortedCats.forEach(([cat, amt]) => {
-    if (budgets[cat] && amt > budgets[cat]) {
-      const over = amt - budgets[cat];
-      insights.push({ type: 'red', text: `${cat} superó el presupuesto en ${fmt(over)}` });
-    }
+    if (budgets[cat] && amt > budgets[cat])
+      insights.push({ type: 'red', text: `${esc(cat)} superó el presupuesto en ${fmt(amt - budgets[cat])}` });
   });
-
   const insightsSection = document.getElementById('insightsSection');
   const insightsList = document.getElementById('insightsList');
   const topInsights = insights.slice(0, 3);
@@ -1170,35 +1141,52 @@ function render() {
       `<div class="insight-card insight-${i.type}">${i.text}</div>`
     ).join('');
   }
+}
 
-  // Recent expenses
+function renderExpenses() {
   const list = document.getElementById('expenseList');
   if (expenses.length === 0) {
     list.innerHTML = '<div class="empty">Cargá tu primer gasto</div>';
-  } else {
-    list.innerHTML = expenses.slice(0, 20).map(e => {
-      const d = new Date(e.date + 'T12:00:00');
-      const dateStr = d.toLocaleDateString('es-UY', { day: 'numeric', month: 'short' });
-      const isPending = e.id === pendingDeleteId;
-      const rightContent = isPending
-        ? `<div class="delete-confirm">
-             <span class="delete-confirm-text">¿Seguro?</span>
-             <button class="delete-yes" onclick="executeDelete('${e.id}')">Sí</button>
-             <button class="delete-no" onclick="cancelDelete()">No</button>
-           </div>`
-        : `<span class="expense-amount">${fmt(e.amount)}</span>
-           <button class="delete-btn" onclick="confirmDelete('${e.id}')" title="Borrar">✕</button>`;
-      return `
-        <div class="expense-item">
-          <div class="expense-left">
-            <span class="expense-desc">${e.description || e.category}</span>
-            <span class="expense-meta">${e.category} · ${dateStr}</span>
-          </div>
-          <div class="expense-right">${rightContent}</div>
-        </div>
-      `;
-    }).join('');
+    return;
   }
+  list.innerHTML = expenses.slice(0, 20).map(e => {
+    const d = new Date(e.date + 'T12:00:00');
+    const dateStr = d.toLocaleDateString('es-UY', { day: 'numeric', month: 'short' });
+    const isPending = e.id === pendingDeleteId;
+    const rightContent = isPending
+      ? `<div class="delete-confirm">
+           <span class="delete-confirm-text">¿Seguro?</span>
+           <button class="delete-yes" onclick="executeDelete('${esc(e.id)}')">Sí</button>
+           <button class="delete-no" onclick="cancelDelete()">No</button>
+         </div>`
+      : `<span class="expense-amount">${fmt(e.amount)}</span>
+         <button class="delete-btn" onclick="confirmDelete('${esc(e.id)}')" title="Borrar">✕</button>`;
+    return `
+      <div class="expense-item">
+        <div class="expense-left">
+          <span class="expense-desc">${esc(e.description || e.category)}</span>
+          <span class="expense-meta">${esc(e.category)} · ${dateStr}</span>
+        </div>
+        <div class="expense-right">${rightContent}</div>
+      </div>
+    `;
+  }).join('');
+}
+
+function render() {
+  const months = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+  document.getElementById('currentMonth').textContent = `${months[viewMonth]} ${viewYear}`;
+
+  const total = expenses.reduce((s, e) => s + Number(e.amount), 0);
+  const cats = catTotals(expenses);
+  const prevCats = catTotals(prevExpenses);
+  const budgets = getBudgets();
+  const sortedCats = Object.entries(cats).sort((a, b) => b[1] - a[1]);
+
+  renderSummary(total);
+  renderCategories(sortedCats, prevCats, budgets);
+  renderInsights(sortedCats, prevCats, budgets, total);
+  renderExpenses();
 }
 
 // ---- MODAL ----
