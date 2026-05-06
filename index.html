@@ -199,6 +199,27 @@ body {
   margin: 20px auto 0;
   padding: 0 20px;
 }
+.cat-chart-wrap {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 14px;
+}
+.cat-chart-wrap:empty { display: none; }
+.cat-chart {
+  display: block;
+}
+.cat-chart-center-label {
+  font-size: 10px;
+  fill: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.cat-chart-center-amt {
+  font-size: 14px;
+  font-weight: 700;
+  fill: var(--text);
+}
 .categories h2 {
   font-size: 14px;
   font-weight: 600;
@@ -627,6 +648,7 @@ body {
 
 <div class="categories">
   <h2>Por categoría</h2>
+  <div class="cat-chart-wrap" id="catChartWrap"></div>
   <div class="cat-list" id="catList">
     <div class="loading">Cargando...</div>
   </div>
@@ -1172,6 +1194,25 @@ function catTotals(arr) {
   return totals;
 }
 
+function donutSvg(sortedCats, total) {
+  if (!total || sortedCats.length < 2) return '';
+  const r = 44;
+  const C = 2 * Math.PI * r;
+  let offset = 0;
+  const slices = sortedCats.map(([cat, amt]) => {
+    const len = (amt / total) * C;
+    const color = CAT_COLORS[cat] || '#8a8a8a';
+    const slice = `<circle cx="60" cy="60" r="${r}" fill="none" stroke="${color}" stroke-width="14" stroke-dasharray="${len.toFixed(2)} ${(C - len).toFixed(2)}" stroke-dashoffset="${(-offset).toFixed(2)}" transform="rotate(-90 60 60)"/>`;
+    offset += len;
+    return slice;
+  }).join('');
+  return `<svg class="cat-chart" viewBox="0 0 120 120" width="120" height="120" aria-hidden="true">
+    ${slices}
+    <text class="cat-chart-center-label" x="60" y="56" text-anchor="middle">Total</text>
+    <text class="cat-chart-center-amt" x="60" y="72" text-anchor="middle">${escapeHtml(fmt(total))}</text>
+  </svg>`;
+}
+
 function render() {
   const months = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 
@@ -1188,6 +1229,9 @@ function render() {
   const prevCats = catTotals(prevExpenses);
   const budgets = getBudgets();
   const sortedCats = Object.entries(cats).sort((a, b) => b[1] - a[1]);
+
+  // Donut chart
+  document.getElementById('catChartWrap').innerHTML = donutSvg(sortedCats, total);
 
   // Categories
   const catList = document.getElementById('catList');
