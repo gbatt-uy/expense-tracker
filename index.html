@@ -108,37 +108,119 @@ body {
 .month-dropdown-item:hover { background: var(--accent-light); }
 .month-dropdown-item.selected { font-weight: 600; color: var(--accent); }
 
-/* Summary */
-.summary {
+/* Summary hero */
+.summary-hero {
   max-width: 480px;
   margin: 0 auto;
   padding: 0 20px;
-  display: flex;
-  gap: 12px;
 }
-.summary-card {
-  flex: 1;
+.summary-hero-card {
   background: var(--card);
-  border-radius: 12px;
-  padding: 16px;
+  border-radius: 16px;
+  padding: 20px;
   box-shadow: var(--shadow);
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
 }
-.summary-card .label {
+.summary-hero-card:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(0,0,0,0.07);
+}
+.summary-label {
   font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.5px;
   color: var(--muted);
   font-weight: 500;
 }
-.summary-card .amount {
-  font-size: 24px;
+.summary-amount {
+  font-size: 36px;
   font-weight: 700;
+  letter-spacing: -1px;
+  line-height: 1.1;
   margin-top: 4px;
+  display: inline-block;
+  transform-origin: left center;
 }
-.summary-card .count {
+.summary-vs {
   font-size: 12px;
+  margin-top: 6px;
+  font-weight: 500;
+  min-height: 16px;
+}
+.summary-vs.up { color: #ef4444; }
+.summary-vs.down { color: var(--accent); }
+.summary-vs.flat { color: var(--muted); }
+.summary-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+}
+.summary-stat .stat-val {
+  font-size: 16px;
+  font-weight: 600;
+}
+.summary-stat .stat-lbl {
+  font-size: 10px;
   color: var(--muted);
   margin-top: 2px;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  font-weight: 500;
+}
+
+/* Chat input */
+.chat-bar {
+  max-width: 480px;
+  margin: 14px auto 0;
+  padding: 0 20px;
+}
+.chat-form {
+  display: flex;
+  gap: 6px;
+  background: var(--card);
+  border-radius: 999px;
+  padding: 5px 5px 5px 18px;
+  box-shadow: var(--shadow);
+  border: 1.5px solid transparent;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.chat-form:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 4px 14px rgba(16,185,129,0.18);
+}
+.chat-input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  font-family: 'Inter', sans-serif;
+  font-size: 15px;
+  outline: none;
+  color: var(--text);
+  min-width: 0;
+}
+.chat-input::placeholder { color: var(--muted); }
+.chat-submit {
+  background: var(--accent);
+  color: white;
+  border: none;
+  border-radius: 999px;
+  padding: 0 16px;
+  height: 36px;
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.1s, opacity 0.15s, background 0.15s;
+}
+.chat-submit:active { transform: scale(0.94); }
+.chat-submit:disabled { background: var(--border); color: var(--muted); cursor: default; }
+.chat-hint {
+  font-size: 11px;
+  color: var(--muted);
+  margin: 6px 0 0 18px;
 }
 
 /* Budget section */
@@ -603,6 +685,32 @@ body {
 }
 .logout-btn:hover { color: var(--accent); }
 .app-content { display: none; }
+
+/* Animations */
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+  100% { transform: scale(1); }
+}
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-4px); }
+  75% { transform: translateX(4px); }
+}
+.app-content.shown {
+  animation: fadeInUp 0.35s ease both;
+}
+.summary-amount.pulse { animation: pulse 0.32s ease; }
+.chat-form.shake { animation: shake 0.3s ease; }
+.cat-row, .insight-card, .expense-item, .trend-card {
+  transition: background 0.15s ease;
+}
+.cat-row:hover { background: #fafaf5; }
+.fab:hover { box-shadow: 0 6px 18px rgba(16,185,129,0.45); }
 </style>
 </head>
 <body>
@@ -649,17 +757,34 @@ body {
   </div>
 </div>
 
-<div class="summary">
-  <div class="summary-card">
-    <div class="label">Total del mes</div>
-    <div class="amount" id="totalAmount">$0</div>
-    <div class="count" id="totalCount">0 gastos</div>
+<div class="summary-hero">
+  <div class="summary-hero-card">
+    <div class="summary-label">Total del mes</div>
+    <div class="summary-amount" id="totalAmount">$0</div>
+    <div class="summary-vs" id="summaryVs"></div>
+    <div class="summary-stats">
+      <div class="summary-stat">
+        <div class="stat-val" id="totalCount">0</div>
+        <div class="stat-lbl">Gastos</div>
+      </div>
+      <div class="summary-stat">
+        <div class="stat-val" id="avgAmount">$0</div>
+        <div class="stat-lbl">Promedio</div>
+      </div>
+      <div class="summary-stat">
+        <div class="stat-val" id="dailyAvg">$0</div>
+        <div class="stat-lbl">Por día</div>
+      </div>
+    </div>
   </div>
-  <div class="summary-card">
-    <div class="label">Promedio</div>
-    <div class="amount" id="avgAmount">$0</div>
-    <div class="count">por gasto</div>
-  </div>
+</div>
+
+<div class="chat-bar">
+  <form class="chat-form" id="chatForm" onsubmit="return submitChat(event)">
+    <input type="text" class="chat-input" id="chatInput" placeholder='Ej: "café 120" o "uber 350"' autocomplete="off" oninput="onChatInput(this)">
+    <button type="submit" class="chat-submit" id="chatSubmit" disabled>Agregar</button>
+  </form>
+  <div class="chat-hint">Escribí descripción y monto, te detecto la categoría</div>
 </div>
 
 <div class="budget-section">
@@ -884,7 +1009,11 @@ function showAuth() {
 
 function showApp() {
   document.getElementById('authScreen').style.display = 'none';
-  document.getElementById('appContent').style.display = 'block';
+  const app = document.getElementById('appContent');
+  app.style.display = 'block';
+  app.classList.remove('shown');
+  void app.offsetWidth;
+  app.classList.add('shown');
   renderCurrencyControls();
   loadExpenses();
 }
@@ -1089,6 +1218,92 @@ document.addEventListener('click', function(e) {
     document.getElementById('monthPicker').classList.remove('open');
   }
 });
+
+// ---- DATE HELPERS ----
+function daysForMonth(year, month) {
+  const now = new Date();
+  if (year === now.getFullYear() && month === now.getMonth()) {
+    return now.getDate();
+  }
+  if (year > now.getFullYear() || (year === now.getFullYear() && month > now.getMonth())) {
+    return 1;
+  }
+  return new Date(year, month + 1, 0).getDate();
+}
+
+// ---- CHAT INPUT ----
+const CATEGORY_KEYWORDS = {
+  'Comida': ['café','cafe','almuerzo','cena','desayuno','restaurant','restorán','restoran','comida','helado','pizza','hamburg','sushi','asado','pan','panadería','panaderia','supermercado','super','devoto','tata','disco','ta-ta','pedido','rappi','pedidosya','mostrador','mcdonald','burger','starbucks','tienda inglesa','geant','chivito','milanesa','empanada'],
+  'Transporte': ['uber','taxi','cabify','didi','nafta','gasolina','combustible','bus','ómnibus','omnibus','peaje','estacionamiento','parking','stm','cutcsa','copsa'],
+  'Entretenimiento': ['cine','movie','concierto','bar','cerveza','vino','fiesta','juego','teatro','show','boliche','pub'],
+  'Salud': ['farmacia','farmashop','san roque','médico','medico','doctor','hospital','dentista','gimnasio','gym','remedio','consulta','análisis','analisis','laboratorio'],
+  'Suscripciones': ['netflix','spotify','suscripción','suscripcion','apple','google','icloud','prime','youtube','disney','hbo','chatgpt','claude','github','dropbox']
+};
+
+function guessCategory(text) {
+  const t = (text || '').toLowerCase();
+  if (!t) return 'Comida';
+  for (const [cat, keys] of Object.entries(CATEGORY_KEYWORDS)) {
+    if (keys.some(k => t.includes(k))) return cat;
+  }
+  return 'Comida';
+}
+
+function parseChatInput(text) {
+  if (!text) return null;
+  text = text.trim();
+  const numRe = /\d+(?:[.,]\d+)?/g;
+  const matches = [...text.matchAll(numRe)];
+  if (matches.length === 0) return null;
+  const m = matches[matches.length - 1];
+  const amount = parseFloat(m[0].replace(',', '.'));
+  if (!(amount > 0)) return null;
+  const desc = (text.slice(0, m.index) + ' ' + text.slice(m.index + m[0].length))
+    .replace(/\s+/g, ' ')
+    .trim();
+  const category = guessCategory(desc);
+  return { amount, description: desc || null, category };
+}
+
+function onChatInput(el) {
+  document.getElementById('chatSubmit').disabled = !el.value.trim();
+}
+
+function shakeChat() {
+  const form = document.getElementById('chatForm');
+  form.classList.remove('shake');
+  void form.offsetWidth;
+  form.classList.add('shake');
+}
+
+async function submitChat(e) {
+  e.preventDefault();
+  const input = document.getElementById('chatInput');
+  const btn = document.getElementById('chatSubmit');
+  const text = input.value.trim();
+  if (!text) return false;
+  const parsed = parseChatInput(text);
+  if (!parsed) {
+    shakeChat();
+    showToast('No entendí. Probá: "café 120"');
+    return false;
+  }
+  btn.disabled = true;
+  const originalText = btn.textContent;
+  btn.textContent = '...';
+  try {
+    await addExpense(parsed.amount, parsed.category, parsed.description, new Date().toISOString().split('T')[0]);
+    input.value = '';
+    const label = parsed.description ? `${parsed.description} · ${parsed.category}` : parsed.category;
+    showToast(`✓ ${label} · ${fmt(toUYU(parsed.amount))}`);
+  } catch (err) {
+    shakeChat();
+    showToast('Error al guardar');
+  }
+  btn.textContent = originalText;
+  btn.disabled = !input.value.trim();
+  return false;
+}
 
 // ---- CSV EXPORT ----
 function csvEscape(s) {
@@ -1327,9 +1542,43 @@ function render() {
 
   // Summary
   const total = expenses.reduce((s, e) => s + Number(e.amount), 0);
-  document.getElementById('totalAmount').textContent = fmt(total);
-  document.getElementById('totalCount').textContent = `${expenses.length} gasto${expenses.length !== 1 ? 's' : ''}`;
-  document.getElementById('avgAmount').textContent = expenses.length ? fmt(total / expenses.length) : '$0';
+  const totalEl = document.getElementById('totalAmount');
+  const newTotalText = fmt(total);
+  if (totalEl.textContent !== newTotalText && totalEl.textContent !== '$0' && totalEl.textContent !== 'US$0') {
+    totalEl.classList.remove('pulse');
+    void totalEl.offsetWidth;
+    totalEl.classList.add('pulse');
+  }
+  totalEl.textContent = newTotalText;
+  document.getElementById('totalCount').textContent = String(expenses.length);
+  document.getElementById('avgAmount').textContent = expenses.length ? fmt(total / expenses.length) : fmt(0);
+
+  // Daily avg (current month → days elapsed; past months → days in month)
+  const days = daysForMonth(viewYear, viewMonth);
+  document.getElementById('dailyAvg').textContent = days > 0 ? fmt(total / days) : fmt(0);
+
+  // vs previous month
+  const prevTotal = prevExpenses.reduce((s, e) => s + Number(e.amount), 0);
+  const vsEl = document.getElementById('summaryVs');
+  if (prevTotal > 0 && total > 0) {
+    const pct = Math.round(((total - prevTotal) / prevTotal) * 100);
+    if (pct > 0) {
+      vsEl.className = 'summary-vs up';
+      vsEl.textContent = `↑${pct}% vs mes pasado`;
+    } else if (pct < 0) {
+      vsEl.className = 'summary-vs down';
+      vsEl.textContent = `↓${Math.abs(pct)}% vs mes pasado`;
+    } else {
+      vsEl.className = 'summary-vs flat';
+      vsEl.textContent = 'Igual al mes pasado';
+    }
+  } else if (prevTotal > 0) {
+    vsEl.className = 'summary-vs down';
+    vsEl.textContent = 'Sin gastos este mes';
+  } else {
+    vsEl.className = 'summary-vs flat';
+    vsEl.textContent = '';
+  }
 
   const cats = catTotals(expenses);
   const prevCats = catTotals(prevExpenses);
