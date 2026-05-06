@@ -639,6 +639,7 @@ body {
   <button class="budget-btn" onclick="openBudgetModal()">Definir presupuesto</button>
   <button class="budget-btn" id="currencyBtn" onclick="toggleCurrency()">UYU</button>
   <button class="budget-btn" id="rateBtn" onclick="setRate()" style="display:none;">Tasa: 40</button>
+  <button class="budget-btn" onclick="exportCsv()">Exportar CSV</button>
 </div>
 
 <div class="insights" id="insightsSection" style="display:none;">
@@ -1048,6 +1049,31 @@ document.addEventListener('click', function(e) {
     document.getElementById('monthPicker').classList.remove('open');
   }
 });
+
+// ---- CSV EXPORT ----
+function csvEscape(s) {
+  if (s == null) return '';
+  const str = String(s);
+  if (/[",\n\r]/.test(str)) return '"' + str.replace(/"/g, '""') + '"';
+  return str;
+}
+
+function exportCsv() {
+  if (expenses.length === 0) { showToast('Sin gastos para exportar'); return; }
+  const headers = ['fecha', 'categoria', 'descripcion', 'monto_uyu'];
+  const rows = expenses.map(e => [e.date, e.category, e.description || '', Number(e.amount)]);
+  const csv = [headers, ...rows].map(r => r.map(csvEscape).join(',')).join('\n');
+  const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const mm = String(viewMonth + 1).padStart(2, '0');
+  a.href = url;
+  a.download = `gastos-${viewYear}-${mm}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
 
 // ---- TOAST ----
 let toastTimer = null;
