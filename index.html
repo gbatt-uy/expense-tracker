@@ -46,14 +46,15 @@ body {
 
 /* Header */
 .header {
-  padding: 24px 20px 16px;
+  padding: 22px 20px 6px;
   max-width: 480px;
   margin: 0 auto;
 }
 .header h1 {
-  font-size: 28px;
-  font-weight: 700;
-  letter-spacing: -0.5px;
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: -0.3px;
+  color: var(--muted);
 }
 .month-nav {
   display: flex;
@@ -108,22 +109,11 @@ body {
 .month-dropdown-item:hover { background: var(--accent-light); }
 .month-dropdown-item.selected { font-weight: 600; color: var(--accent); }
 
-/* Summary hero */
+/* Summary hero — un solo número grande */
 .summary-hero {
   max-width: 480px;
   margin: 0 auto;
-  padding: 0 20px;
-}
-.summary-hero-card {
-  background: var(--card);
-  border-radius: 16px;
-  padding: 20px;
-  box-shadow: var(--shadow);
-  transition: transform 0.18s ease, box-shadow 0.18s ease;
-}
-.summary-hero-card:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 6px 18px rgba(0,0,0,0.07);
+  padding: 8px 20px 0;
 }
 .summary-label {
   font-size: 11px;
@@ -133,36 +123,40 @@ body {
   font-weight: 500;
 }
 .summary-amount {
-  font-size: 36px;
+  font-size: 48px;
   font-weight: 700;
-  letter-spacing: -1px;
-  line-height: 1.1;
-  margin-top: 4px;
+  letter-spacing: -1.5px;
+  line-height: 1.05;
+  margin-top: 2px;
   display: inline-block;
   transform-origin: left center;
 }
 .summary-vs {
-  font-size: 12px;
-  margin-top: 6px;
+  font-size: 13px;
+  margin-top: 4px;
   font-weight: 500;
-  min-height: 16px;
+  min-height: 18px;
 }
 .summary-vs.up { color: #ef4444; }
 .summary-vs.down { color: var(--accent); }
 .summary-vs.flat { color: var(--muted); }
-.summary-stats {
+
+/* Stats grid — solo dentro del análisis colapsado */
+.analysis-stats {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 12px;
-  margin-top: 16px;
-  padding-top: 14px;
-  border-top: 1px solid var(--border);
+  gap: 10px;
+  background: var(--card);
+  border-radius: 12px;
+  padding: 14px;
+  box-shadow: var(--shadow);
+  margin-bottom: 12px;
 }
-.summary-stat .stat-val {
+.analysis-stat .stat-val {
   font-size: 16px;
   font-weight: 600;
 }
-.summary-stat .stat-lbl {
+.analysis-stat .stat-lbl {
   font-size: 10px;
   color: var(--muted);
   margin-top: 2px;
@@ -171,35 +165,36 @@ body {
   font-weight: 500;
 }
 
-/* Chat input */
+/* Chat input — HERO */
 .chat-bar {
   max-width: 480px;
-  margin: 14px auto 0;
+  margin: 24px auto 0;
   padding: 0 20px;
 }
 .chat-form {
   display: flex;
-  gap: 6px;
+  gap: 8px;
   background: var(--card);
   border-radius: 999px;
-  padding: 5px 5px 5px 18px;
-  box-shadow: var(--shadow);
+  padding: 7px 7px 7px 22px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
   border: 1.5px solid transparent;
   transition: border-color 0.15s, box-shadow 0.15s;
 }
 .chat-form:focus-within {
   border-color: var(--accent);
-  box-shadow: 0 4px 14px rgba(16,185,129,0.18);
+  box-shadow: 0 6px 18px rgba(16,185,129,0.2);
 }
 .chat-input {
   flex: 1;
   border: none;
   background: transparent;
   font-family: 'Inter', sans-serif;
-  font-size: 15px;
+  font-size: 16px;
   outline: none;
   color: var(--text);
   min-width: 0;
+  padding: 6px 0;
 }
 .chat-input::placeholder { color: var(--muted); }
 .chat-submit {
@@ -207,10 +202,10 @@ body {
   color: white;
   border: none;
   border-radius: 999px;
-  padding: 0 16px;
-  height: 36px;
+  padding: 0 22px;
+  height: 44px;
   font-family: 'Inter', sans-serif;
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 600;
   cursor: pointer;
   transition: transform 0.1s, opacity 0.15s, background 0.15s;
@@ -218,23 +213,24 @@ body {
 .chat-submit:active { transform: scale(0.94); }
 .chat-submit:disabled { background: var(--border); color: var(--muted); cursor: default; }
 .chat-hint {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--muted);
-  margin: 6px 0 0 18px;
+  margin: 8px 0 0 22px;
 }
 
-/* Budget section */
-.budget-section {
+/* Settings buttons (small, footer-ish) */
+.settings-row {
   max-width: 480px;
-  margin: 12px auto 0;
+  margin: 24px auto 0;
   padding: 0 20px;
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
+  justify-content: center;
 }
 .budget-btn {
   background: none;
-  border: 1.5px solid var(--border);
+  border: 1px solid var(--border);
   color: var(--muted);
   font-family: 'Inter', sans-serif;
   font-size: 12px;
@@ -247,18 +243,44 @@ body {
 .budget-btn:hover { color: var(--accent); border-color: var(--accent); }
 .budget-btn.active { color: var(--accent); border-color: var(--accent); }
 
-/* Trend */
-.trend {
+/* Analysis (collapsible) */
+.analysis {
   max-width: 480px;
-  margin: 16px auto 0;
+  margin: 32px auto 0;
   padding: 0 20px;
 }
-.trend:empty { display: none; }
+.analysis-toggle {
+  width: 100%;
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px 16px;
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--muted);
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: color 0.15s, border-color 0.15s;
+}
+.analysis-toggle:hover { color: var(--accent); border-color: var(--accent); }
+.analysis-toggle .chev { font-size: 10px; transition: transform 0.2s; }
+.analysis.open .analysis-toggle .chev { transform: rotate(180deg); }
+.analysis-content { display: none; margin-top: 14px; }
+.analysis.open .analysis-content {
+  display: block;
+  animation: fadeInUp 0.25s ease both;
+}
+
+/* Trend (within analysis) */
 .trend-card {
   background: var(--card);
   border-radius: 12px;
-  padding: 12px;
+  padding: 14px;
   box-shadow: var(--shadow);
+  margin-bottom: 12px;
 }
 .trend-title {
   font-size: 11px;
@@ -274,50 +296,18 @@ body {
   height: auto;
 }
 
-/* Insights */
-.insights {
-  max-width: 480px;
-  margin: 16px auto 0;
-  padding: 0 20px;
-}
-.insights h2 {
-  font-size: 14px;
-  font-weight: 600;
-  margin-bottom: 8px;
-  color: var(--muted);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-.insight-card {
-  padding: 10px 12px;
-  border-radius: 8px;
+/* Donut (within analysis) */
+.donut-card {
   background: var(--card);
-  margin-bottom: 6px;
-  font-size: 13px;
-  line-height: 1.4;
+  border-radius: 12px;
+  padding: 14px;
   box-shadow: var(--shadow);
-  border-left: 3px solid;
-}
-.insight-red { border-left-color: #ef4444; }
-.insight-green { border-left-color: #10b981; }
-.insight-gray { border-left-color: #8a8a8a; }
-
-/* Categories */
-.categories {
-  max-width: 480px;
-  margin: 20px auto 0;
-  padding: 0 20px;
-}
-.cat-chart-wrap {
   display: flex;
   justify-content: center;
   align-items: center;
-  margin-bottom: 14px;
 }
-.cat-chart-wrap:empty { display: none; }
-.cat-chart {
-  display: block;
-}
+.donut-card:empty { display: none; }
+.cat-chart { display: block; }
 .cat-chart-center-label {
   font-size: 10px;
   fill: var(--muted);
@@ -329,13 +319,40 @@ body {
   font-weight: 700;
   fill: var(--text);
 }
+
+/* Insights (subtle) */
+.insights {
+  max-width: 480px;
+  margin: 24px auto 0;
+  padding: 0 20px;
+}
+.insight-card {
+  padding: 10px 14px;
+  border-radius: 8px;
+  background: transparent;
+  border: 1px solid var(--border);
+  font-size: 13px;
+  line-height: 1.4;
+  border-left: 3px solid;
+  color: var(--muted);
+}
+.insight-red { border-left-color: #ef4444; }
+.insight-green { border-left-color: #10b981; }
+.insight-gray { border-left-color: #8a8a8a; }
+
+/* Categories */
+.categories {
+  max-width: 480px;
+  margin: 28px auto 0;
+  padding: 0 20px;
+}
 .categories h2 {
-  font-size: 14px;
+  font-size: 12px;
   font-weight: 600;
   margin-bottom: 10px;
   color: var(--muted);
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.6px;
 }
 .cat-list {
   display: flex;
@@ -395,17 +412,33 @@ body {
 /* Recent */
 .recent {
   max-width: 480px;
-  margin: 20px auto 0;
-  padding: 0 20px 100px;
+  margin: 28px auto 0;
+  padding: 0 20px;
 }
 .recent h2 {
-  font-size: 14px;
+  font-size: 12px;
   font-weight: 600;
   margin-bottom: 10px;
   color: var(--muted);
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.6px;
 }
+.show-more-btn {
+  display: block;
+  width: 100%;
+  margin-top: 12px;
+  padding: 10px;
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: var(--muted);
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+}
+.show-more-btn:hover { color: var(--accent); border-color: var(--accent); }
 .expense-item {
   display: flex;
   align-items: center;
@@ -485,26 +518,28 @@ body {
   font-family: 'Inter', sans-serif;
 }
 
-/* Add button */
+/* Add button — secundario, el chat es el primario */
 .fab {
   position: fixed;
-  bottom: 28px;
+  bottom: 24px;
   left: 50%;
   transform: translateX(-50%);
-  background: var(--accent);
-  color: white;
-  border: none;
-  padding: 14px 28px;
+  background: var(--card);
+  color: var(--muted);
+  border: 1px solid var(--border);
+  padding: 10px 20px;
   border-radius: 50px;
   font-family: 'Inter', sans-serif;
-  font-size: 15px;
-  font-weight: 600;
+  font-size: 13px;
+  font-weight: 500;
   cursor: pointer;
-  box-shadow: 0 4px 12px rgba(16,185,129,0.35);
-  transition: transform 0.15s, box-shadow 0.15s;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+  transition: transform 0.15s, box-shadow 0.15s, color 0.15s, border-color 0.15s;
   z-index: 100;
 }
+.fab:hover { color: var(--accent); border-color: var(--accent); }
 .fab:active { transform: translateX(-50%) scale(0.96); }
+.bottom-pad { height: 90px; }
 
 /* Modal */
 .modal-overlay {
@@ -710,7 +745,6 @@ body {
   transition: background 0.15s ease;
 }
 .cat-row:hover { background: #fafaf5; }
-.fab:hover { box-shadow: 0 6px 18px rgba(16,185,129,0.45); }
 </style>
 </head>
 <body>
@@ -758,25 +792,9 @@ body {
 </div>
 
 <div class="summary-hero">
-  <div class="summary-hero-card">
-    <div class="summary-label">Total del mes</div>
-    <div class="summary-amount" id="totalAmount">$0</div>
-    <div class="summary-vs" id="summaryVs"></div>
-    <div class="summary-stats">
-      <div class="summary-stat">
-        <div class="stat-val" id="totalCount">0</div>
-        <div class="stat-lbl">Gastos</div>
-      </div>
-      <div class="summary-stat">
-        <div class="stat-val" id="avgAmount">$0</div>
-        <div class="stat-lbl">Promedio</div>
-      </div>
-      <div class="summary-stat">
-        <div class="stat-val" id="dailyAvg">$0</div>
-        <div class="stat-lbl">Por día</div>
-      </div>
-    </div>
-  </div>
+  <div class="summary-label">Total del mes</div>
+  <div class="summary-amount" id="totalAmount">$0</div>
+  <div class="summary-vs" id="summaryVs"></div>
 </div>
 
 <div class="chat-bar">
@@ -787,23 +805,12 @@ body {
   <div class="chat-hint">Escribí descripción y monto, te detecto la categoría</div>
 </div>
 
-<div class="budget-section">
-  <button class="budget-btn" onclick="openBudgetModal()">Definir presupuesto</button>
-  <button class="budget-btn" id="currencyBtn" onclick="toggleCurrency()">UYU</button>
-  <button class="budget-btn" id="rateBtn" onclick="setRate()" style="display:none;">Tasa: 40</button>
-  <button class="budget-btn" onclick="exportCsv()">Exportar CSV</button>
-</div>
-
-<div class="trend" id="trendSection"></div>
-
 <div class="insights" id="insightsSection" style="display:none;">
-  <h2>Insights</h2>
   <div id="insightsList"></div>
 </div>
 
 <div class="categories">
   <h2>Por categoría</h2>
-  <div class="cat-chart-wrap" id="catChartWrap"></div>
   <div class="cat-list" id="catList">
     <div class="loading">Cargando...</div>
   </div>
@@ -815,6 +822,40 @@ body {
     <div class="loading">Cargando...</div>
   </div>
 </div>
+
+<div class="analysis" id="analysisSection">
+  <button class="analysis-toggle" onclick="toggleAnalysis()">
+    <span>Ver análisis</span>
+    <span class="chev">▾</span>
+  </button>
+  <div class="analysis-content">
+    <div class="analysis-stats">
+      <div class="analysis-stat">
+        <div class="stat-val" id="totalCount">0</div>
+        <div class="stat-lbl">Gastos</div>
+      </div>
+      <div class="analysis-stat">
+        <div class="stat-val" id="avgAmount">$0</div>
+        <div class="stat-lbl">Promedio</div>
+      </div>
+      <div class="analysis-stat">
+        <div class="stat-val" id="dailyAvg">$0</div>
+        <div class="stat-lbl">Por día</div>
+      </div>
+    </div>
+    <div id="trendSection"></div>
+    <div class="donut-card" id="catChartWrap"></div>
+  </div>
+</div>
+
+<div class="settings-row">
+  <button class="budget-btn" onclick="openBudgetModal()">Presupuesto</button>
+  <button class="budget-btn" id="currencyBtn" onclick="toggleCurrency()">UYU</button>
+  <button class="budget-btn" id="rateBtn" onclick="setRate()" style="display:none;">Tasa: 40</button>
+  <button class="budget-btn" onclick="exportCsv()">Exportar CSV</button>
+</div>
+
+<div class="bottom-pad"></div>
 
 <button class="fab" onclick="openModal()">+ Nuevo gasto</button>
 
@@ -1207,6 +1248,7 @@ function selectMonth(year, month) {
   viewYear = year;
   viewMonth = month;
   pendingDeleteId = null;
+  recentExpanded = false;
   document.getElementById('monthDropdown').classList.remove('open');
   document.getElementById('monthPicker').classList.remove('open');
   loadExpenses();
@@ -1671,24 +1713,26 @@ function render() {
     }
   });
 
+  // Insights — máximo 1, sutil
   const insightsSection = document.getElementById('insightsSection');
   const insightsList = document.getElementById('insightsList');
-  const topInsights = insights.slice(0, 3);
-  if (topInsights.length === 0) {
+  const topInsight = insights[0];
+  if (!topInsight) {
     insightsSection.style.display = 'none';
   } else {
     insightsSection.style.display = 'block';
-    insightsList.innerHTML = topInsights.map(i =>
-      `<div class="insight-card insight-${i.type}">${escapeHtml(i.text)}</div>`
-    ).join('');
+    insightsList.innerHTML = `<div class="insight-card insight-${topInsight.type}">${escapeHtml(topInsight.text)}</div>`;
   }
 
-  // Recent expenses
+  // Recent expenses — 5 por defecto, expandible
   const list = document.getElementById('expenseList');
   if (expenses.length === 0) {
     list.innerHTML = '<div class="empty">Cargá tu primer gasto</div>';
   } else {
-    list.innerHTML = expenses.slice(0, 20).map(e => {
+    const limit = recentExpanded ? expenses.length : 5;
+    const shown = expenses.slice(0, limit);
+    const remaining = expenses.length - limit;
+    const itemsHtml = shown.map(e => {
       const d = new Date(e.date + 'T12:00:00');
       const dateStr = d.toLocaleDateString('es-UY', { day: 'numeric', month: 'short' });
       const isPending = e.id === pendingDeleteId;
@@ -1710,7 +1754,23 @@ function render() {
         </div>
       `;
     }).join('');
+    const showMoreBtn = remaining > 0
+      ? `<button class="show-more-btn" onclick="showAllRecent()">Ver ${remaining} más</button>`
+      : '';
+    list.innerHTML = itemsHtml + showMoreBtn;
   }
+}
+
+// ---- ANALYSIS / RECENT TOGGLE ----
+let recentExpanded = false;
+
+function showAllRecent() {
+  recentExpanded = true;
+  render();
+}
+
+function toggleAnalysis() {
+  document.getElementById('analysisSection').classList.toggle('open');
 }
 
 // ---- MODAL ----
