@@ -285,7 +285,10 @@ body {
   flex-direction: column;
   gap: 2px;
   flex: 1;
+  cursor: pointer;
+  min-width: 0;
 }
+.expense-left:hover .expense-desc { color: var(--accent); }
 .expense-desc {
   font-size: 14px;
   font-weight: 500;
@@ -637,7 +640,7 @@ body {
 <!-- Expense modal -->
 <div class="modal-overlay" id="modalOverlay" onclick="closeIfOverlay(event)">
   <div class="modal">
-    <h2>Nuevo gasto</h2>
+    <h2 id="modalTitle">Nuevo gasto</h2>
     <div class="field">
       <label>Monto ($)</label>
       <input type="number" id="inputAmount" placeholder="0" inputmode="decimal" step="0.01">
@@ -939,6 +942,17 @@ async function addExpense(amount, category, description, date) {
   await loadExpenses();
 }
 
+async function updateExpense(id, amount, category, description, date) {
+  const patch = {
+    amount: parseFloat(amount),
+    category,
+    description: description || null,
+    date
+  };
+  await supaFetch(`expenses?id=eq.${encodeURIComponent(id)}`, { method: 'PATCH', body: patch });
+  await loadExpenses();
+}
+
 // ---- DELETE ----
 let pendingDeleteId = null;
 
@@ -1209,7 +1223,7 @@ function render() {
            <button class="delete-btn" onclick="confirmDelete('${e.id}')" title="Borrar">✕</button>`;
       return `
         <div class="expense-item">
-          <div class="expense-left">
+          <div class="expense-left" onclick="openEditModal('${e.id}')">
             <span class="expense-desc">${escapeHtml(e.description || e.category)}</span>
             <span class="expense-meta">${escapeHtml(e.category)} · ${dateStr}</span>
           </div>
@@ -1221,12 +1235,32 @@ function render() {
 }
 
 // ---- MODAL ----
+let editingId = null;
+
 function onCategoryChange() {
   const val = document.getElementById('inputCategory').value;
   document.getElementById('customCatField').style.display = val === '__custom__' ? 'block' : 'none';
 }
 
+function setCategorySelect(category) {
+  const select = document.getElementById('inputCategory');
+  const customField = document.getElementById('customCatField');
+  const customInput = document.getElementById('inputCustomCat');
+  const known = Array.from(select.options).some(o => o.value === category);
+  if (known) {
+    select.value = category;
+    customField.style.display = 'none';
+    customInput.value = '';
+  } else {
+    select.value = '__custom__';
+    customField.style.display = 'block';
+    customInput.value = category;
+  }
+}
+
 function openModal() {
+  editingId = null;
+  document.getElementById('modalTitle').textContent = 'Nuevo gasto';
   document.getElementById('modalOverlay').classList.add('open');
   document.getElementById('inputAmount').value = '';
   document.getElementById('inputDesc').value = '';
@@ -1236,8 +1270,22 @@ function openModal() {
   document.getElementById('inputDate').value = new Date().toISOString().split('T')[0];
   setTimeout(() => document.getElementById('inputAmount').focus(), 100);
 }
+
+function openEditModal(id) {
+  const e = expenses.find(x => x.id === id);
+  if (!e) return;
+  editingId = id;
+  document.getElementById('modalTitle').textContent = 'Editar gasto';
+  document.getElementById('modalOverlay').classList.add('open');
+  document.getElementById('inputAmount').value = e.amount;
+  document.getElementById('inputDesc').value = e.description || '';
+  setCategorySelect(e.category);
+  document.getElementById('inputDate').value = e.date;
+}
+
 function closeModal() {
   document.getElementById('modalOverlay').classList.remove('open');
+  editingId = null;
 }
 function closeIfOverlay(e) {
   if (e.target === document.getElementById('modalOverlay')) closeModal();
@@ -1262,9 +1310,15 @@ async function saveExpense() {
   btn.textContent = '...';
   btn.disabled = true;
   try {
-    await addExpense(amount, category, desc, date);
-    closeModal();
-    showToast('✓ Guardado');
+    if (editingId) {
+      await updateExpense(editingId, amount, category, desc, date);
+      closeModal();
+      showToast('✓ Actualizado');
+    } else {
+      await addExpense(amount, category, desc, date);
+      closeModal();
+      showToast('✓ Guardado');
+    }
   } catch (e) {
     alert('Error al guardar: ' + e.message);
   }
