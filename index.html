@@ -755,14 +755,14 @@ async function sendOTP() {
     if (res.ok) {
       document.getElementById('authStep1').style.display = 'none';
       document.getElementById('authStep2').style.display = 'block';
-      document.getElementById('authMsg').innerHTML = '';
+      document.getElementById('authMsg').textContent = '';
       setTimeout(() => document.getElementById('authOTP').focus(), 100);
     } else {
       const err = await res.json();
-      document.getElementById('authMsg').innerHTML = `<div class="err">Error: ${err.msg || err.error_description || 'Intenta de nuevo'}</div>`;
+      showAuthError(err.msg || err.error_description || 'Intenta de nuevo');
     }
   } catch(e) {
-    document.getElementById('authMsg').innerHTML = `<div class="err">Error de conexión</div>`;
+    showAuthError('Error de conexión');
   }
   btn.textContent = 'Enviar código';
   btn.disabled = false;
@@ -785,10 +785,10 @@ async function verifyOTP() {
       saveSession(data);
       showApp();
     } else {
-      document.getElementById('authMsg').innerHTML = `<div class="err">Código incorrecto o expirado</div>`;
+      showAuthError('Código incorrecto o expirado');
     }
   } catch(e) {
-    document.getElementById('authMsg').innerHTML = `<div class="err">Error de conexión</div>`;
+    showAuthError('Error de conexión');
   }
   btn.textContent = 'Verificar';
   btn.disabled = false;
@@ -797,7 +797,16 @@ async function verifyOTP() {
 function backToEmail() {
   document.getElementById('authStep1').style.display = 'block';
   document.getElementById('authStep2').style.display = 'none';
-  document.getElementById('authMsg').innerHTML = '';
+  document.getElementById('authMsg').textContent = '';
+}
+
+function showAuthError(msg) {
+  const el = document.getElementById('authMsg');
+  el.textContent = '';
+  const div = document.createElement('div');
+  div.className = 'err';
+  div.textContent = msg;
+  el.appendChild(div);
 }
 
 function logout() {
@@ -1022,8 +1031,8 @@ function openBudgetModal() {
   ])];
   document.getElementById('budgetFields').innerHTML = activeCats.map(cat => `
     <div class="field">
-      <label>${cat}</label>
-      <input type="number" data-cat="${cat}" placeholder="Sin límite" inputmode="decimal"
+      <label>${escapeHtml(cat)}</label>
+      <input type="number" data-cat="${escapeHtml(cat)}" placeholder="Sin límite" inputmode="decimal"
         value="${budgets[cat] || ''}" min="0" step="1">
     </div>
   `).join('');
@@ -1054,6 +1063,16 @@ function saveBudgets() {
 // ---- RENDER ----
 function fmt(n) {
   return '$' + Number(n).toLocaleString('es-UY', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+}
+
+function escapeHtml(s) {
+  if (s == null) return '';
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 }
 
 function catTotals(arr) {
@@ -1112,7 +1131,7 @@ function render() {
           <div class="cat-row-main">
             <span class="cat-name">
               <span class="cat-dot" style="background:${CAT_COLORS[cat] || '#8a8a8a'}"></span>
-              ${cat}
+              ${escapeHtml(cat)}
             </span>
             <span class="cat-amount">${fmt(amt)}${changeHtml}</span>
           </div>
@@ -1167,7 +1186,7 @@ function render() {
   } else {
     insightsSection.style.display = 'block';
     insightsList.innerHTML = topInsights.map(i =>
-      `<div class="insight-card insight-${i.type}">${i.text}</div>`
+      `<div class="insight-card insight-${i.type}">${escapeHtml(i.text)}</div>`
     ).join('');
   }
 
@@ -1191,8 +1210,8 @@ function render() {
       return `
         <div class="expense-item">
           <div class="expense-left">
-            <span class="expense-desc">${e.description || e.category}</span>
-            <span class="expense-meta">${e.category} · ${dateStr}</span>
+            <span class="expense-desc">${escapeHtml(e.description || e.category)}</span>
+            <span class="expense-meta">${escapeHtml(e.category)} · ${dateStr}</span>
           </div>
           <div class="expense-right">${rightContent}</div>
         </div>
