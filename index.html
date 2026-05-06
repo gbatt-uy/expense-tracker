@@ -165,6 +165,33 @@ body {
 .budget-btn:hover { color: var(--accent); border-color: var(--accent); }
 .budget-btn.active { color: var(--accent); border-color: var(--accent); }
 
+/* Trend */
+.trend {
+  max-width: 480px;
+  margin: 16px auto 0;
+  padding: 0 20px;
+}
+.trend:empty { display: none; }
+.trend-card {
+  background: var(--card);
+  border-radius: 12px;
+  padding: 12px;
+  box-shadow: var(--shadow);
+}
+.trend-title {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--muted);
+  font-weight: 500;
+  margin-bottom: 6px;
+}
+.trend-chart {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
 /* Insights */
 .insights {
   max-width: 480px;
@@ -642,6 +669,8 @@ body {
   <button class="budget-btn" onclick="exportCsv()">Exportar CSV</button>
 </div>
 
+<div class="trend" id="trendSection"></div>
+
 <div class="insights" id="insightsSection" style="display:none;">
   <h2>Insights</h2>
   <div id="insightsList"></div>
@@ -911,6 +940,8 @@ async function supaFetch(path, opts = {}) {
 }
 
 // ---- DATA ----
+const TREND_MONTHS = 6;
+let monthHistory = []; // [{ year, month, expenses, total }, ...] index 0 = current
 let expenses = [];
 let prevExpenses = [];
 let histMonths = [[], []]; // [2 months ago, 3 months ago]
@@ -933,26 +964,35 @@ function offsetMonth(year, month, delta) {
 }
 
 async function loadExpenses() {
-  const { start, end } = monthRange(viewYear, viewMonth);
-  const p1 = offsetMonth(viewYear, viewMonth, -1);
-  const { start: p1s, end: p1e } = monthRange(p1.year, p1.month);
-  const p2 = offsetMonth(viewYear, viewMonth, -2);
-  const { start: p2s, end: p2e } = monthRange(p2.year, p2.month);
-  const p3 = offsetMonth(viewYear, viewMonth, -3);
-  const { start: p3s, end: p3e } = monthRange(p3.year, p3.month);
+  const monthsMeta = [];
+  const queries = [];
+  for (let i = 0; i < TREND_MONTHS; i++) {
+    const m = offsetMonth(viewYear, viewMonth, -i);
+    const { start, end } = monthRange(m.year, m.month);
+    monthsMeta.push({ year: m.year, month: m.month });
+    queries.push(supaFetch(`expenses?date=gte.${start}&date=lte.${end}&order=created_at.desc`));
+  }
 
   try {
-    const [curr, prev1, hist2, hist3] = await Promise.all([
-      supaFetch(`expenses?date=gte.${start}&date=lte.${end}&order=created_at.desc`),
-      supaFetch(`expenses?date=gte.${p1s}&date=lte.${p1e}&order=created_at.desc`),
-      supaFetch(`expenses?date=gte.${p2s}&date=lte.${p2e}&order=created_at.desc`),
-      supaFetch(`expenses?date=gte.${p3s}&date=lte.${p3e}&order=created_at.desc`),
-    ]);
-    expenses = curr || [];
-    prevExpenses = prev1 || [];
-    histMonths = [hist2 || [], hist3 || []];
+    const results = await Promise.all(queries);
+    monthHistory = results.map((arr, i) => {
+      const list = arr || [];
+      return {
+        year: monthsMeta[i].year,
+        month: monthsMeta[i].month,
+        expenses: list,
+        total: list.reduce((s, e) => s + Number(e.amount), 0)
+      };
+    });
+    expenses = monthHistory[0].expenses;
+    prevExpenses = monthHistory[1] ? monthHistory[1].expenses : [];
+    histMonths = [
+      monthHistory[2] ? monthHistory[2].expenses : [],
+      monthHistory[3] ? monthHistory[3].expenses : []
+    ];
   } catch (e) {
     console.error('Error loading:', e);
+    monthHistory = [];
     expenses = [];
     prevExpenses = [];
     histMonths = [[], []];
@@ -1220,6 +1260,46 @@ function catTotals(arr) {
   return totals;
 }
 
+function trendSvg() {
+  if (monthHistory.length < 2) return '';
+  const ordered = monthHistory.slice().reverse(); // oldest -> newest
+  const totals = ordered.map(m => m.total);
+  const nonZero = totals.filter(t => t > 0).length;
+  if (nonZero < 2) return '';
+  const max = Math.max(...totals, 1);
+  const W = 480, H = 110, padX = 16, padTop = 12, labelArea = 18;
+  const usableH = H - padTop - labelArea;
+  const stepX = (W - 2 * padX) / Math.max(totals.length - 1, 1);
+  const monthShort = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+  const points = totals.map((t, i) => {
+    const x = padX + i * stepX;
+    const y = padTop + usableH - (t / max) * usableH;
+    return [x, y];
+  });
+  const path = points.map((p, i) => (i === 0 ? 'M' : 'L') + p[0].toFixed(1) + ',' + p[1].toFixed(1)).join(' ');
+  const areaPath = path +
+    ` L ${points[points.length - 1][0].toFixed(1)},${(padTop + usableH).toFixed(1)}` +
+    ` L ${points[0][0].toFixed(1)},${(padTop + usableH).toFixed(1)} Z`;
+  const dots = points.map((p, i) => {
+    const isCurrent = i === points.length - 1;
+    return `<circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="${isCurrent ? 4 : 3}" fill="${isCurrent ? 'var(--accent)' : 'var(--card)'}" stroke="var(--accent)" stroke-width="2"/>`;
+  }).join('');
+  const labels = ordered.map((m, i) => {
+    const x = padX + i * stepX;
+    const isCurrent = i === ordered.length - 1;
+    return `<text x="${x.toFixed(1)}" y="${H - 4}" text-anchor="middle" font-size="10" font-weight="${isCurrent ? '600' : '400'}" fill="${isCurrent ? 'var(--accent)' : 'var(--muted)'}">${monthShort[m.month]}</text>`;
+  }).join('');
+  return `<div class="trend-card">
+    <div class="trend-title">Tendencia · 6 meses</div>
+    <svg class="trend-chart" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
+      <path d="${areaPath}" fill="var(--accent-light)" stroke="none"/>
+      <path d="${path}" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      ${dots}
+      ${labels}
+    </svg>
+  </div>`;
+}
+
 function donutSvg(sortedCats, total) {
   if (!total || sortedCats.length < 2) return '';
   const r = 44;
@@ -1255,6 +1335,9 @@ function render() {
   const prevCats = catTotals(prevExpenses);
   const budgets = getBudgets();
   const sortedCats = Object.entries(cats).sort((a, b) => b[1] - a[1]);
+
+  // Trend chart
+  document.getElementById('trendSection').innerHTML = trendSvg();
 
   // Donut chart
   document.getElementById('catChartWrap').innerHTML = donutSvg(sortedCats, total);
